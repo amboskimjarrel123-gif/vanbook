@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VanExpress - Modern Van Booking System</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+  </style>
+
+  <!-- Firebase SDK (Compat version - easiest for pure HTML) -->
+  <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore-compat.js"></script>
+</head>
+<body class="bg-slate-50 font-sans min-h-screen flex flex-col text-slate-800 antialiased selection:bg-indigo-500 selection:text-white">
+
+  <!-- NAVBAR -->
+  <nav class="bg-indigo-950 text-white shadow-xl sticky top-0 z-50 border-b border-indigo-900/50 backdrop-blur-md bg-opacity-95">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-20 py-3">
+        <div onclick="showWelcome()" class="flex items-center space-x-3 group cursor-pointer">
+          <div class="w-11 h-11 rounded-2xl bg-indigo-900 flex items-center justify-center border border-indigo-700/80 shadow-lg group-hover:scale-105 transition duration-200">
+            <i class="fa-solid fa-van-shuttle text-xl text-amber-400"></i>
+          </div>
+          <div>
+            <span class="font-extrabold text-xl tracking-wider text-white">Van<span class="text-amber-400">Express</span></span>
+            <span class="block text-[10px] text-indigo-300 font-semibold tracking-widest uppercase">Transit Portal</span>
+          </div>
+        </div>
+
+        <div id="navRightAction">
+          <button onclick="showAuth('login')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-5 py-2.5 rounded-2xl text-xs transition duration-200 shadow-md shadow-indigo-600/20 flex items-center space-x-2">
+            <i class="fa-solid fa-right-to-bracket"></i>
+            <span>Sign In</span>
+          </button>
+        </div>
+
+        <div id="navUserSection" class="hidden flex items-center space-x-4">
+          <div class="hidden sm:flex items-center space-x-3 text-xs bg-indigo-900/80 px-4 py-2.5 rounded-2xl border border-indigo-800/80 shadow-inner">
+            <i class="fa-solid fa-circle-user text-amber-400 text-base"></i>
+            <span id="navUserName" class="font-bold text-slate-100">User</span>
+            <span id="navRoleBadge" class="text-[9px] uppercase font-black px-2.5 py-0.5 rounded-lg bg-amber-400 text-slate-950 tracking-wider">COMMUTER</span>
+          </div>
+          <button onclick="logout()" class="bg-rose-500 hover:bg-rose-600 active:scale-95 text-white text-xs px-4 py-2.5 rounded-2xl font-bold transition duration-200 shadow-md shadow-rose-500/20 flex items-center space-x-1.5">
+            <i class="fa-solid fa-right-from-bracket"></i>
+            <span>Logout</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- MAIN CONTAINER -->
+  <main class="flex-grow flex items-center justify-center p-4 sm:p-6 lg:p-8">
+
+    <!-- 0. WELCOME -->
+    <div id="welcomeView" class="w-full max-w-5xl my-6 space-y-8">
+      <div class="relative bg-gradient-to-br from-indigo-950 via-indigo-900 to-slate-950 rounded-3xl p-8 sm:p-14 text-white shadow-2xl overflow-hidden border border-indigo-800/80">
+        <div class="absolute -right-12 -bottom-12 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="relative z-10 max-w-2xl space-y-6">
+          <div class="inline-flex items-center space-x-2 px-4 py-2 rounded-full bg-indigo-900/90 border border-indigo-700/50 text-amber-400 text-xs font-black tracking-wider uppercase shadow-sm">
+            <i class="fa-solid fa-bolt text-amber-400"></i>
+            <span>Next-Gen Transit Booking System</span>
+          </div>
+          <h1 class="text-3xl sm:text-5xl font-black tracking-tight leading-tight">
+            Fast, Reliable & Modern <span class="text-amber-400">Van Travel</span>
+          </h1>
+          <p class="text-indigo-200 text-sm sm:text-base font-normal leading-relaxed">
+            Welcome to VanExpress. Book seats instantly, obtain secure digital E-Tickets, and experience smooth real-time coordination between Commuters, Staff, Drivers, and Administrators.
+          </p>
+          <div class="flex flex-wrap gap-4 pt-2">
+            <button onclick="showAuth('signup')" class="bg-amber-400 hover:bg-amber-500 active:scale-95 text-slate-950 font-black px-7 py-4 rounded-2xl text-xs uppercase tracking-wider transition duration-200 shadow-xl shadow-amber-400/20 flex items-center space-x-2.5">
+              <i class="fa-solid fa-user-plus text-sm"></i>
+              <span>Register as Commuter</span>
+            </button>
+            <button onclick="showAuth('login')" class="bg-indigo-900/80 hover:bg-indigo-900 active:scale-95 text-white border border-indigo-700 font-bold px-7 py-4 rounded-2xl text-xs uppercase tracking-wider transition duration-200 flex items-center space-x-2.5 shadow-lg">
+              <i class="fa-solid fa-right-to-bracket text-sm"></i>
+              <span>Sign In to Portal</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 1. AUTH -->
+    <div id="authContainer" class="hidden w-full max-w-md bg-white rounded-3xl shadow-2xl shadow-indigo-950/10 overflow-hidden border border-slate-200/80 my-6">
+      <div class="flex items-center justify-between border-b border-slate-100 bg-slate-50/80 p-2.5">
+        <div class="flex flex-1 space-x-1.5">
+          <button id="loginTabBtn" onclick="switchAuthTab('login')" class="flex-1 py-3 text-center text-xs font-extrabold rounded-2xl text-indigo-600 bg-white shadow-sm border border-slate-200/60">
+            <i class="fa-solid fa-right-to-bracket mr-1.5"></i> Sign In
+          </button>
+          <button id="signupTabBtn" onclick="switchAuthTab('signup')" class="flex-1 py-3 text-center text-xs font-extrabold rounded-2xl text-slate-500 hover:text-indigo-600">
+            <i class="fa-solid fa-user-plus mr-1.5"></i> Register
+          </button>
+        </div>
+        <button onclick="showWelcome()" class="ml-2 w-9 h-9 rounded-2xl bg-white border border-slate-200 text-slate-400 hover:text-slate-700 flex items-center justify-center">
+          <i class="fa-solid fa-house text-xs"></i>
+        </button>
+      </div>
+
+      <div class="p-6 sm:p-8">
+        <div id="authAlert" class="hidden mb-5 p-4 rounded-2xl text-xs font-semibold flex items-center space-x-3 shadow-sm"></div>
+
+        <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Username</label>
+            <div class="relative group">
+              <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400"><i class="fa-solid fa-user text-sm"></i></span>
+              <input type="text" id="loginUsername" required class="w-full pl-11 pr-4 py-3.5 rounded-2xl border border-slate-200 bg-slate-50/50 text-sm font-semibold focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 outline-none" placeholder="Enter username">
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Password</label>
+            <div class="relative group">
+              <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400"><i class="fa-solid fa-lock text-sm"></i></span>
+              <input type="password" id="loginPassword" required class="w-full pl-11 pr-4 py-3.5 rounded-2xl border border-slate-200 bg-slate-50/50 text-sm font-semibold focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 outline-none" placeholder="••••••••">
+            </div>
+          </div>
+          <button type="submit" class="w-full mt-3 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-extrabold py-4 rounded-2xl shadow-xl shadow-indigo-600/25 flex items-center justify-center space-x-2">
+            <i class="fa-solid fa-arrow-right-to-bracket"></i>
+            <span>Sign In to Account</span>
+          </button>
+        </form>
+
+        <form id="signupForm" onsubmit="handleSignup(event)" class="hidden space-y-3.5">
+          <div class="grid grid-cols-2 gap-2.5">
+            <div>
+              <label class="block text-xs font-bold text-slate-600 uppercase mb-1.5">First Name</label>
+              <input type="text" id="signupFirstName" required class="w-full px-3.5 py-3 rounded-2xl border border-slate-200 bg-slate-50/50 text-sm font-semibold outline-none" placeholder="Juan">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-600 uppercase mb-1.5">Last Name</label>
+              <input type="text" id="signupLastName" required class="w-full px-3.5 py-3 rounded-2xl border border-slate-200 bg-slate-50/50 text-sm font-semibold outline-none" placeholder="Dela Cruz">
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-600 uppercase mb-1.5">Address</label>
+            <input type="text" id="signupAddress" required class="w-full px-4 py-3 rounded-2xl border border-slate-200 bg-slate-50/50 text-sm font-semibold outline-none" placeholder="City, Province">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-600 uppercase mb-1.5">Contact Number (11 Digits)</label>
+            <input type="text" id="signupContact" maxlength="11" required class="w-full px-4 py-3 rounded-2xl border border-slate-200 bg-slate-50/50 text-sm font-semibold outline-none" placeholder="09123456789">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-600 uppercase mb-1.5">Email Address</label>
+            <input type="email" id="signupEmail" required class="w-full px-4 py-3 rounded-2xl border border-slate-200 bg-slate-50/50 text-sm font-semibold outline-none" placeholder="juan@example.com">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-600 uppercase mb-1.5">Username</label>
+            <input type="text" id="signupUsername" required class="w-full px-4 py-3 rounded-2xl border border-slate-200 bg-slate-50/50 text-sm font-semibold outline-none" placeholder="Choose a username">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-600 uppercase mb-1.5">Password</label>
+            <input type="password" id="signupPassword" minlength="6" required class="w-full px-4 py-3 rounded-2xl border border-slate-200 bg-slate-50/50 text-sm font-semibold outline-none" placeholder="Min. 6 characters">
+          </div>
+          <button type="submit" class="w-full mt-3 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-extrabold py-4 rounded-2xl shadow-xl shadow-emerald-600/25 flex items-center justify-center space-x-2">
+            <i class="fa-solid fa-user-plus"></i>
+            <span>Register Commuter Account</span>
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- 2. COMMUTER -->
+    <div id="commuterView" class="hidden w-full max-w-5xl my-4 space-y-6">
+      <div class="bg-gradient-to-r from-indigo-950 to-indigo-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border border-indigo-900">
+        <div>
+          <h1 class="text-2xl sm:text-3xl font-black tracking-tight"><i class="fa-solid fa-ticket mr-2 text-amber-400"></i>Commuter Booking Portal</h1>
+          <p class="text-indigo-200 text-sm mt-1">Browse scheduled departures and reserve your seats with ease.</p>
+        </div>
+        <button onclick="loadCommuterTickets()" class="bg-amber-400 hover:bg-amber-500 text-slate-950 font-black px-6 py-3.5 rounded-2xl text-xs uppercase tracking-wider shadow-lg shadow-amber-400/20 flex items-center space-x-2">
+          <i class="fa-solid fa-qrcode text-sm"></i>
+          <span>View My E-Tickets</span>
+        </button>
+      </div>
+
+      <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-200/80">
+        <h2 class="text-lg font-black text-slate-900 mb-6 flex items-center space-x-3">
+          <span class="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-sm border border-indigo-100"><i class="fa-solid fa-bus"></i></span>
+          <span>Available Van Departures</span>
+        </h2>
+        <div id="commuterTripList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+      </div>
+
+      <div id="ticketSection" class="hidden bg-white rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-200/80">
+        <h2 class="text-lg font-black text-slate-900 mb-6 flex items-center space-x-3">
+          <span class="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-sm border border-emerald-100"><i class="fa-solid fa-qrcode"></i></span>
+          <span>My Generated E-Tickets</span>
+        </h2>
+        <div id="commuterTicketList" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+      </div>
+    </div>
+
+    <!-- 3. STAFF -->
+    <div id="staffView" class="hidden w-full max-w-5xl my-4 space-y-6">
+      <div class="bg-gradient-to-r from-emerald-950 to-emerald-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border border-emerald-900">
+        <div>
+          <h1 class="text-2xl sm:text-3xl font-black tracking-tight"><i class="fa-solid fa-clipboard-list mr-2 text-amber-300"></i>Staff Dispatcher Dashboard</h1>
+          <p class="text-emerald-100 text-sm mt-1">Create driver accounts, assign van trips, and monitor active departures.</p>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-200/80">
+        <h2 class="text-lg font-black text-slate-900 mb-6 flex items-center space-x-3">
+          <span class="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-sm border border-indigo-100"><i class="fa-solid fa-id-card"></i></span>
+          <span>Register New Driver Account</span>
+        </h2>
+        <form onsubmit="handleStaffCreateDriver(event)" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-600 uppercase mb-1.5">First Name</label>
+            <input type="text" id="driverFirstName" required class="w-full px-4 py-3 rounded-2xl border border-slate-200 text-sm font-semibold outline-none bg-slate-50/50" placeholder="Juan">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-600 uppercase mb-1.5">Last Name</label>
+            <input type="text" id="driverLastName" required class="w-full px-4 py-3 rounded-2xl border border-slate-200 text-sm font-semibold outline-none bg-slate-50/50" placeholder="Cruz">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-600 uppercase mb-1.5">Username</label>
+            <input type="text" id="driverUsername" required class="w-full px-4 py-3 rounded-2xl border border-slate-200 text-sm font-semibold outline-none bg-slate-50/50" placeholder="driverjuan">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-600 uppercase mb-1.5">Password</label>
+            <input type="password" id="driverPassword" required minlength="6" class="w-full px-4 py-3 rounded-2xl border border-slate-200 text-sm font-semibold outline-none bg-slate-50/50" placeholder="••••••••">
+          </div>
+          <div class="md:col-span-2 flex items-end">
+            <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold py-3.5 rounded-2xl shadow-lg">Create Driver Account</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-200/80">
+        <div class="flex justify-between items-center mb-6">
+          <h2 class="text-lg font-black text-slate-900 flex items-center space-x-3">
+            <span class="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-sm border border-emerald-100"><i class="fa-solid fa-plus-circle"></i></span>
+            <span>Generate New Van Trip (Assign Driver)</span>
+          </h2>
+          <button onclick="loadStaffDriversDropdown()" class="text-xs text-indigo-600 hover:text-indigo-800 font-bold flex items-center space-x-1.5 bg-indigo-50 px-3 py-2 rounded-xl">
+            <i class="fa-solid fa-rotate"></i> <span>Refresh Drivers</span>
+          </button>
+        </div>
+        <form onsubmit="handleGenerateTrip(event)" class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div>
+            <label class="block text-xs font-bold text-slate-600 uppercase mb-1.5">Select Checked-In (In) Driver</label>
+            <select id="tripDriverSelect" required class="w-full px-4 py-3.5 rounded-2xl border border-slate-200 bg-slate-50/50 text-sm font-semibold outline-none">
+              <option value="">-- Choose Available Driver --</option>
+            </select>
+            <p class="text-[11px] text-slate-400 mt-1.5 font-medium">Note: Only drivers currently checked <strong>In</strong> appear here.</p>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-600 uppercase mb-1.5">Total Van Seats</label>
+            <input type="number" id="seats" value="14" min="1" max="30" required class="w-full px-4 py-3.5 rounded-2xl border border-slate-200 bg-slate-50/50 text-sm font-semibold outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-600 uppercase mb-1.5">Van Route</label>
+            <input type="text" id="route" required class="w-full px-4 py-3.5 rounded-2xl border border-slate-200 bg-slate-50/50 text-sm font-semibold outline-none" placeholder="e.g., Manila to Baguio">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-600 uppercase mb-1.5">Transport Fee (₱)</label>
+            <input type="number" id="fee" required class="w-full px-4 py-3.5 rounded-2xl border border-slate-200 bg-slate-50/50 text-sm font-semibold outline-none" placeholder="500">
+          </div>
+          <div class="md:col-span-2">
+            <label class="block text-xs font-bold text-slate-600 uppercase mb-1.5">Departure Date & Time</label>
+            <input type="datetime-local" id="departureTime" required class="w-full px-4 py-3.5 rounded-2xl border border-slate-200 bg-slate-50/50 text-sm font-semibold outline-none">
+          </div>
+          <div class="md:col-span-2 pt-2">
+            <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-extrabold py-4 rounded-2xl shadow-lg">Publish Trip Schedule</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-200/80">
+        <h2 class="text-lg font-black text-slate-900 mb-6 flex items-center space-x-3">
+          <span class="w-10 h-10 rounded-2xl bg-slate-100 text-slate-800 flex items-center justify-center text-sm border border-slate-200"><i class="fa-solid fa-list-check"></i></span>
+          <span>Active Booked Trips & Driver Decision Status</span>
+        </h2>
+        <div id="staffTripList" class="space-y-4"></div>
+      </div>
+    </div>
+
+    <!-- 4. DRIVER -->
+    <div id="driverView" class="hidden w-full max-w-5xl my-4 space-y-6">
+      <div class="bg-gradient-to-r from-amber-500 to-amber-600 rounded-3xl p-6 sm:p-8 text-slate-950 shadow-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border border-amber-400">
+        <div>
+          <h1 class="text-2xl sm:text-3xl font-black tracking-tight"><i class="fa-solid fa-id-badge mr-2"></i>Driver Travel Portal</h1>
+          <p class="text-slate-900 text-sm font-semibold mt-1">Check In / Out of duty status and view your assigned van trips.</p>
+        </div>
+        <div class="bg-white/95 p-3.5 rounded-2xl shadow-lg flex items-center space-x-3.5 border border-amber-300">
+          <div class="text-right">
+            <span class="block text-[10px] uppercase font-bold text-slate-500">Duty Status</span>
+            <span id="driverStatusBadge" class="text-xs font-black uppercase text-rose-600">OUT</span>
+          </div>
+          <div class="flex space-x-1.5">
+            <button id="driverInBtn" onclick="updateDriverDuty('In')" class="bg-slate-100 hover:bg-emerald-600 hover:text-white text-slate-800 text-xs font-bold px-3.5 py-2.5 rounded-xl">IN</button>
+            <button id="driverOutBtn" onclick="updateDriverDuty('Out')" class="bg-rose-600 text-white text-xs font-bold px-3.5 py-2.5 rounded-xl shadow-md">OUT</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-200/80">
+        <h2 class="text-lg font-black text-slate-900 mb-6 flex items-center space-x-3">
+          <span class="w-10 h-10 rounded-2xl bg-amber-50 text-amber-700 flex items-center justify-center text-sm border border-amber-100"><i class="fa-solid fa-van-shuttle"></i></span>
+          <span>Assigned Van Trips & Booked Passengers</span>
+        </h2>
+        <div id="driverTripList" class="space-y-6"></div>
+      </div>
+    </div>
+
+    <!-- 5. ADMIN -->
+    <div id="adminView" class="hidden w-full max-w-5xl my-4 space-y-6">
+      <div class="bg-gradient-to-r from-slate-950 to-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl flex justify-between items-center border border-slate-800">
+        <div>
+          <h1 class="text-2xl sm:text-3xl font-black tracking-tight"><i class="fa-solid fa-user-shield mr-2 text-amber-400"></i>Admin Management Console</h1>
+          <p class="text-slate-300 text-sm mt-1">Supervise registered commuters, staff, and drivers directory.</p>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-200/80">
+        <h2 class="text-lg font-black text-slate-900 mb-6 flex items-center space-x-3">
+          <span class="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-sm border border-indigo-100"><i class="fa-solid fa-users"></i></span>
+          <span>Registered Users & Drivers Directory</span>
+        </h2>
+        <div id="adminUserList" class="divide-y divide-slate-100"></div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- DELETE TRIP MODAL -->
+  <div id="deleteTripModal" class="hidden fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-6 border border-slate-100">
+      <div class="flex items-center space-x-4">
+        <div class="w-14 h-14 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center text-2xl border border-rose-100">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+        </div>
+        <div>
+          <h3 class="text-xl font-black text-slate-900">Delete Trip Schedule</h3>
+          <p class="text-xs text-slate-500 mt-0.5">This action cannot be undone and will cancel associated tickets.</p>
+        </div>
+      </div>
+      <input type="hidden" id="deleteTripIdTarget">
+      <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-xs text-slate-600">
+        <p>Are you sure you want to remove this trip dispatch from active rotation?</p>
+      </div>
+      <div class="flex space-x-3 pt-2">
+        <button onclick="closeDeleteTripModal()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold py-3.5 rounded-2xl text-xs uppercase tracking-wider">Cancel</button>
+        <button onclick="confirmDeleteTrip()" class="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-extrabold py-3.5 rounded-2xl text-xs uppercase tracking-wider shadow-lg">Yes, Delete Trip</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- EDIT USER MODAL -->
+  <div id="editUserModal" class="hidden fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-5 border border-slate-100">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+        <h3 class="text-lg font-black text-slate-900 flex items-center space-x-2.5">
+          <span class="w-9 h-9 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-sm border border-indigo-100"><i class="fa-solid fa-user-pen"></i></span>
+          <span>Edit User Credentials</span>
+        </h3>
+        <button onclick="closeEditModal()" class="w-9 h-9 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 flex items-center justify-center"><i class="fa-solid fa-xmark text-sm"></i></button>
+      </div>
+      <input type="hidden" id="editUserId">
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-600 uppercase mb-1.5">New Username</label>
+          <input type="text" id="editUsername" class="w-full px-4 py-3 rounded-2xl border border-slate-200 text-sm font-semibold outline-none bg-slate-50/50">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-600 uppercase mb-1.5">New Password</label>
+          <input type="password" id="editPassword" class="w-full px-4 py-3 rounded-2xl border border-slate-200 text-sm font-semibold outline-none bg-slate-50/50" placeholder="••••••••">
+        </div>
+      </div>
+      <div class="flex space-x-3 pt-2">
+        <button onclick="saveUserCredentials()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold py-3.5 rounded-2xl text-xs uppercase tracking-wider shadow-lg">Save Changes</button>
+        <button onclick="closeEditModal()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold py-3.5 rounded-2xl text-xs uppercase tracking-wider">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ============================================================
+    // YOUR FIREBASE CONFIG (already filled)
+    // ============================================================
+    const firebaseConfig = {
+      apiKey: "AIzaSyCiyB_jHhD0Nc25k4P8Gz6Ge-YlrKLMmcw",
+      authDomain: "vanbook-51eeb.firebaseapp.com",
+      projectId: "vanbook-51eeb",
+      storageBucket: "vanbook-51eeb.firebasestorage.app",
+      messagingSenderId: "755866220459",
+      appId: "1:755866220459:web:6d0ad87f1e05c2cc1ec4ee"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // ============================================================
+    // SEED DEFAULT USERS (admin + staff) - runs only once
+    // ============================================================
+    async function seedDefaultUsers() {
+      try {
+        const adminSnap = await db.collection('users').where('username', '==', 'admin').get();
+        if (adminSnap.empty) {
+          await db.collection('users').add({
+            fullName: 'System Administrator',
+            firstName: 'System',
+            lastName: 'Administrator',
+            address: 'Main Terminal',
+            contactNumber: '09123456789',
+            email: 'admin@van.com',
+            username: 'admin',
+            password: 'admin123',
+            role: 'admin'
+          });
+          console.log('Admin user created');
+        }
+
+        const staffSnap = await db.collection('users').where('username', '==', 'staff').get();
+        if (staffSnap.empty) {
+          await db.collection('users').add({
+            fullName: 'Terminal Staff',
+            firstName: 'Terminal',
+            lastName: 'Staff',
+            address: 'Main Office',
+            contactNumber: '09987654321',
+            email: 'staff@van.com',
+            username: 'staff',
+            password: 'staff123',
+            role: 'staff'
+          });
+          console.log('Staff user created');
+        }
+      } catch (err) {
+        console.error('Seeding error:', err);
+      }
+    }
+    seedDefaultUsers();
+
+    let currentUser = null;
+
+    // ====================== UI HELPERS ======================
+    function showWelcome() {
+      document.getElementById('welcomeView').classList.remove('hidden');
+      document.getElementById('authContainer').classList.add('hidden');
+      document.getElementById('commuterView').classList.add('hidden');
+      document.getElementById('staffView').classList.add('hidden');
+      document.getElementById('driverView').classList.add('hidden');
+      document.getElementById('adminView').classList.add('hidden');
+      document.getElementById('navRightAction').classList.remove('hidden');
+      document.getElementById('navUserSection').classList.add('hidden');
+    }
+
+    function showAuth(mode = 'login') {
+      document.getElementById('welcomeView').classList.add('hidden');
+      document.getElementById('authContainer').classList.remove('hidden');
+      document.getElementById('navRightAction').classList.add('hidden');
+      switchAuthTab(mode);
+    }
+
+    function switchAuthTab(tab) {
+      const loginForm = document.getElementById('loginForm');
+      const signupForm = document.getElementById('signupForm');
+      const loginTabBtn = document.getElementById('loginTabBtn');
+      const signupTabBtn = document.getElementById('signupTabBtn');
+
+      if (tab === 'login') {
+        loginForm.classList.remove('hidden');
+        signupForm.classList.add('hidden');
+        loginTabBtn.className = "flex-1 py-3 text-center text-xs font-extrabold rounded-2xl text-indigo-600 bg-white shadow-sm border border-slate-200/60";
+        signupTabBtn.className = "flex-1 py-3 text-center text-xs font-extrabold rounded-2xl text-slate-500 hover:text-indigo-600";
+      } else {
+        loginForm.classList.add('hidden');
+        signupForm.classList.remove('hidden');
+        signupTabBtn.className = "flex-1 py-3 text-center text-xs font-extrabold rounded-2xl text-emerald-600 bg-white shadow-sm border border-slate-200/60";
+        loginTabBtn.className = "flex-1 py-3 text-center text-xs font-extrabold rounded-2xl text-slate-500 hover:text-indigo-600";
+      }
+    }
+
+    function showAlert(msg, isError = true) {
+      const alert = document.getElementById('authAlert');
+      alert.classList.remove('hidden', 'bg-rose-50', 'text-rose-700', 'border-rose-200', 'bg-emerald-50', 'text-emerald-700', 'border-emerald-200');
+      alert.classList.add('border', isError ? 'bg-rose-50' : 'bg-emerald-50', isError ? 'text-rose-700' : 'text-emerald-700', isError ? 'border-rose-200' : 'border-emerald-200');
+      alert.innerHTML = `<i class="fa-solid ${isError ? 'fa-circle-exclamation text-rose-500' : 'fa-circle-check text-emerald-500'} text-base"></i> <span>${msg}</span>`;
+    }
+
+    // ====================== AUTH ======================
+    async function handleLogin(e) {
+      e.preventDefault();
+      const username = document.getElementById('loginUsername').value.trim().toLowerCase();
+      const password = document.getElementById('loginPassword').value;
+
+      try {
+        const snap = await db.collection('users').where('username', '==', username).get();
+        if (snap.empty) return showAlert("Invalid username or password.", true);
+
+        const userDoc = snap.docs[0];
+        const userData = userDoc.data();
+
+        if (userData.password !== password) {
+          return showAlert("Invalid username or password.", true);
+        }
+
+        currentUser = {
+          id: userDoc.id,
+          fullName: userData.fullName || `${userData.firstName || ''} ${userData.lastName || ''}`.trim(),
+          firstName: userData.firstName || '',
+          lastName: userData.lastName || '',
+          username: userData.username,
+          role: userData.role,
+          dutyStatus: userData.dutyStatus || 'Out',
+          isAvailable: userData.isAvailable || false
+        };
+        renderSession();
+      } catch (err) {
+        showAlert("Connection error. Make sure Firestore is enabled.", true);
+        console.error(err);
+      }
+    }
+
+    async function handleSignup(e) {
+      e.preventDefault();
+      const firstName = document.getElementById('signupFirstName').value.trim();
+      const lastName = document.getElementById('signupLastName').value.trim();
+      const address = document.getElementById('signupAddress').value.trim();
+      const contactNumber = document.getElementById('signupContact').value.trim();
+      const email = document.getElementById('signupEmail').value.trim().toLowerCase();
+      const username = document.getElementById('signupUsername').value.trim().toLowerCase();
+      const password = document.getElementById('signupPassword').value;
+
+      if (contactNumber.length !== 11 || !/^\d+$/.test(contactNumber)) {
+        return showAlert("Contact number must be exactly 11 numeric digits.", true);
+      }
+      if (!email.includes('@')) {
+        return showAlert("Email address must contain '@'.", true);
+      }
+
+      try {
+        const existing = await db.collection('users').where('username', '==', username).get();
+        if (!existing.empty) return showAlert("Username already taken.", true);
+
+        const docRef = await db.collection('users').add({
+          firstName, lastName,
+          fullName: `${firstName} ${lastName}`,
+          address, contactNumber, email, username, password,
+          role: 'commuter'
+        });
+
+        currentUser = {
+          id: docRef.id,
+          fullName: `${firstName} ${lastName}`,
+          firstName, lastName, username,
+          role: 'commuter'
+        };
+        renderSession();
+      } catch (err) {
+        showAlert("Error creating account.", true);
+        console.error(err);
+      }
+    }
+
+    function renderSession() {
+      document.getElementById('welcomeView').classList.add('hidden');
+      document.getElementById('authContainer').classList.add('hidden');
+      document.getElementById('navRightAction').classList.add('hidden');
+      document.getElementById('navUserSection').classList.remove('hidden');
+      document.getElementById('navUserName').innerText = currentUser.fullName;
+
+      const badge = document.getElementById('navRoleBadge');
+      badge.innerText = currentUser.role.toUpperCase();
+
+      document.getElementById('commuterView').classList.add('hidden');
+      document.getElementById('staffView').classList.add('hidden');
+      document.getElementById('driverView').classList.add('hidden');
+      document.getElementById('adminView').classList.add('hidden');
+
+      if (currentUser.role === 'admin') {
+        badge.className = "text-[9px] uppercase font-black px-2.5 py-0.5 rounded-lg bg-rose-500 text-white tracking-wider";
+        document.getElementById('adminView').classList.remove('hidden');
+        loadAdminUsers();
+      } else if (currentUser.role === 'staff') {
+        badge.className = "text-[9px] uppercase font-black px-2.5 py-0.5 rounded-lg bg-emerald-500 text-white tracking-wider";
+        document.getElementById('staffView').classList.remove('hidden');
+        loadStaffDriversDropdown();
+        loadStaffTrips();
+      } else if (currentUser.role === 'driver') {
+        badge.className = "text-[9px] uppercase font-black px-2.5 py-0.5 rounded-lg bg-amber-400 text-slate-950 tracking-wider";
+        document.getElementById('driverView').classList.remove('hidden');
+        updateDriverDutyUI(currentUser.dutyStatus || 'Out');
+        loadDriverTrips();
+      } else {
+        badge.className = "text-[9px] uppercase font-black px-2.5 py-0.5 rounded-lg bg-indigo-500 text-white tracking-wider";
+        document.getElementById('commuterView').classList.remove('hidden');
+        document.getElementById('ticketSection').classList.add('hidden');
+        loadTrips();
+      }
+    }
+
+    function logout() {
+      currentUser = null;
+      showWelcome();
+    }
+
+    // ====================== STAFF ======================
+    async function handleStaffCreateDriver(e) {
+      e.preventDefault();
+      const firstName = document.getElementById('driverFirstName').value.trim();
+      const lastName = document.getElementById('driverLastName').value.trim();
+      const username = document.getElementById('driverUsername').value.trim().toLowerCase();
+      const password = document.getElementById('driverPassword').value;
+
+      try {
+        const existing = await db.collection('users').where('username', '==', username).get();
+        if (!existing.empty) return alert("Username already exists.");
+
+        await db.collection('users').add({
+          fullName: `${firstName} ${lastName}`,
+          firstName, lastName, username, password,
+          role: 'driver',
+          dutyStatus: 'Out',
+          isAvailable: false
+        });
+
+        alert(`Driver account created for ${firstName} ${lastName}!`);
+        e.target.reset();
+        loadStaffDriversDropdown();
+      } catch (err) {
+        alert("Error creating driver.");
+        console.error(err);
+      }
+    }
+
+    async function loadStaffDriversDropdown() {
+      const select = document.getElementById('tripDriverSelect');
+      try {
+        const snap = await db.collection('users')
+          .where('role', '==', 'driver')
+          .where('isAvailable', '==', true)
+          .get();
+
+        let html = '<option value="">-- Choose Available Driver (Checked In) --</option>';
+        if (snap.empty) {
+          html = '<option value="">-- No Drivers Checked In Currently --</option>';
+        } else {
+          snap.forEach(doc => {
+            const d = doc.data();
+            html += `<option value="${doc.id}" data-name="${d.fullName}">${d.fullName} (@${d.username})</option>`;
+          });
+        }
+        select.innerHTML = html;
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    async function handleGenerateTrip(e) {
+      e.preventDefault();
+      const driverSelect = document.getElementById('tripDriverSelect');
+      const driverId = driverSelect.value;
+      if (!driverId) return alert("Please select an available (Checked-In) driver.");
+
+      const driverName = driverSelect.options[driverSelect.selectedIndex].getAttribute('data-name');
+      const seats = parseInt(document.getElementById('seats').value);
+      const route = document.getElementById('route').value;
+      const fee = parseFloat(document.getElementById('fee').value);
+      const departureTime = document.getElementById('departureTime').value;
+
+      try {
+        await db.collection('trips').add({
+          driverId, driverName,
+          totalSeats: seats,
+          availableSeats: seats,
+          route,
+          departureTime,
+          transportFee: fee,
+          status: 'Wait for Commuters'
+        });
+
+        alert("Van trip schedule created!");
+        e.target.reset();
+        loadStaffTrips();
+        loadStaffDriversDropdown();
+      } catch (err) {
+        alert("Error creating trip.");
+        console.error(err);
+      }
+    }
+
+    async function loadStaffTrips() {
+      const container = document.getElementById('staffTripList');
+      try {
+        const snap = await db.collection('trips').get();
+        if (snap.empty) {
+          container.innerHTML = `<p class="text-sm text-slate-500 py-6 text-center">No trips created yet.</p>`;
+          return;
+        }
+
+        let html = "";
+        snap.forEach(doc => {
+          const t = doc.data();
+          const statusBadge = t.status === 'Ready to Depart' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800';
+          html += `
+            <div class="p-5 rounded-2xl border border-slate-200/80 bg-slate-50/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <div class="flex items-center space-x-2.5">
+                  <span class="${statusBadge} text-[10px] font-black px-2.5 py-1 rounded-lg uppercase"><i class="fa-solid fa-signal mr-1"></i>${t.status}</span>
+                  <span class="text-xs font-bold text-slate-500"><i class="fa-solid fa-bus text-emerald-600 mr-1"></i> ${t.availableSeats}/${t.totalSeats} Seats Left</span>
+                </div>
+                <p class="font-extrabold text-slate-900 text-base mt-1.5">${t.route}</p>
+                <p class="text-xs text-slate-600 mt-0.5"><i class="fa-solid fa-user-gear text-slate-400 mr-1"></i> Driver: <strong>${t.driverName}</strong> | Fee: <strong>₱${t.transportFee}</strong></p>
+                <p class="text-xs text-slate-500 mt-0.5"><i class="fa-solid fa-clock text-slate-400 mr-1"></i> Departure: ${new Date(t.departureTime).toLocaleString()}</p>
+              </div>
+              <button onclick="openDeleteTripModal('${doc.id}')" class="bg-rose-50 hover:bg-rose-600 text-rose-600 hover:text-white border border-rose-200 text-xs font-extrabold px-4.5 py-2.5 rounded-xl flex items-center space-x-1.5">
+                <i class="fa-solid fa-trash-can"></i>
+                <span>Delete Trip</span>
+              </button>
+            </div>
+          `;
+        });
+        container.innerHTML = html;
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    function openDeleteTripModal(tripId) {
+      document.getElementById('deleteTripIdTarget').value = tripId;
+      document.getElementById('deleteTripModal').classList.remove('hidden');
+    }
+    function closeDeleteTripModal() {
+      document.getElementById('deleteTripModal').classList.add('hidden');
+    }
+    async function confirmDeleteTrip() {
+      const tripId = document.getElementById('deleteTripIdTarget').value;
+      try {
+        await db.collection('trips').doc(tripId).delete();
+
+        // delete related tickets
+        const ticketsSnap = await db.collection('tickets').where('tripId', '==', tripId).get();
+        const batch = db.batch();
+        ticketsSnap.forEach(doc => batch.delete(doc.ref));
+        await batch.commit();
+
+        closeDeleteTripModal();
+        loadStaffTrips();
+      } catch (err) {
+        alert("Error deleting trip.");
+        console.error(err);
+      }
+    }
+
+    // ====================== DRIVER ======================
+    async function updateDriverDuty(status) {
+      try {
+        await db.collection('users').doc(currentUser.id).update({
+          dutyStatus: status,
+          isAvailable: status === 'In'
+        });
+        currentUser.dutyStatus = status;
+        currentUser.isAvailable = status === 'In';
+        updateDriverDutyUI(status);
+      } catch (err) {
+        alert("Error updating status.");
+        console.error(err);
+      }
+    }
+
+    function updateDriverDutyUI(status) {
+      const badge = document.getElementById('driverStatusBadge');
+      const inBtn = document.getElementById('driverInBtn');
+      const outBtn = document.getElementById('driverOutBtn');
+
+      if (status === 'In') {
+        badge.innerText = 'IN (AVAILABLE)';
+        badge.className = 'text-xs font-black uppercase text-emerald-600';
+        inBtn.className = 'bg-emerald-600 text-white text-xs font-bold px-3.5 py-2.5 rounded-xl shadow-md';
+        outBtn.className = 'bg-slate-100 hover:bg-rose-600 hover:text-white text-slate-800 text-xs font-bold px-3.5 py-2.5 rounded-xl';
+      } else {
+        badge.innerText = 'OUT (UNAVAILABLE)';
+        badge.className = 'text-xs font-black uppercase text-rose-600';
+        inBtn.className = 'bg-slate-100 hover:bg-emerald-600 hover:text-white text-slate-800 text-xs font-bold px-3.5 py-2.5 rounded-xl';
+        outBtn.className = 'bg-rose-600 text-white text-xs font-bold px-3.5 py-2.5 rounded-xl shadow-md';
+      }
+    }
+
+    async function loadDriverTrips() {
+      const container = document.getElementById('driverTripList');
+      container.innerHTML = `<p class="text-xs text-slate-400 py-4">Loading assigned trips...</p>`;
+
+      try {
+        const snap = await db.collection('trips').where('driverId', '==', currentUser.id).get();
+        if (snap.empty) {
+          container.innerHTML = `<p class="text-sm text-slate-500 py-8 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200">No assigned van trips for today.</p>`;
+          return;
+        }
+
+        let html = "";
+        for (const doc of snap.docs) {
+          const t = doc.data();
+          const ticketsSnap = await db.collection('tickets').where('tripId', '==', doc.id).get();
+          const passengers = ticketsSnap.docs.map(tk => tk.data().userName);
+
+          const passengerList = passengers.length > 0
+            ? passengers.map(p => `<span class="bg-indigo-50 text-indigo-700 px-3.5 py-1.5 rounded-xl text-xs font-bold border border-indigo-100 flex items-center space-x-1"><i class="fa-solid fa-user text-indigo-400 mr-1"></i>${p}</span>`).join(' ')
+            : '<p class="text-xs text-slate-400 font-medium">No commuter bookings yet.</p>';
+
+          html += `
+            <div class="bg-white border border-slate-200/80 rounded-3xl p-6 space-y-4 shadow-sm">
+              <div class="flex justify-between items-center border-b border-slate-100 pb-4">
+                <div>
+                  <span class="text-[10px] uppercase font-extrabold text-amber-700 bg-amber-50 px-3 py-1 rounded-lg border border-amber-200">Assigned Van Route</span>
+                  <h3 class="text-xl font-black text-slate-900 mt-1.5">${t.route}</h3>
+                </div>
+                <div class="text-right">
+                  <span class="text-[10px] text-slate-400 font-bold uppercase block">Current Status</span>
+                  <span class="font-black text-indigo-600 text-sm bg-indigo-50 px-3 py-1 rounded-xl border border-indigo-100 inline-block mt-0.5">${t.status}</span>
+                </div>
+              </div>
+              <div>
+                <h4 class="text-xs font-bold text-slate-600 uppercase mb-2.5"><i class="fa-solid fa-users mr-1.5 text-slate-400"></i> Booked Commuters (${passengers.length} passengers):</h4>
+                <div class="flex flex-wrap gap-2">${passengerList}</div>
+              </div>
+              <div class="pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
+                <span class="text-xs text-slate-500 font-medium"><i class="fa-solid fa-clock mr-1 text-slate-400"></i> Alis: ${new Date(t.departureTime).toLocaleString()}</span>
+                <div class="flex space-x-2">
+                  <button onclick="updateDriverStatus('${doc.id}', 'Wait for Commuters')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold px-4 py-2.5 rounded-xl flex items-center space-x-1.5">
+                    <i class="fa-solid fa-hourglass-half"></i>
+                    <span>Wait for Others</span>
+                  </button>
+                  <button onclick="updateDriverStatus('${doc.id}', 'Ready to Depart')" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold px-4 py-2.5 rounded-xl shadow-md flex items-center space-x-1.5">
+                    <i class="fa-solid fa-van-shuttle"></i>
+                    <span>Ready to Go / Depart</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          `;
+        }
+        container.innerHTML = html;
+      } catch (err) {
+        console.error(err);
+        container.innerHTML = `<p class="text-sm text-rose-500">Error loading trips.</p>`;
+      }
+    }
+
+    async function updateDriverStatus(tripId, status) {
+      try {
+        await db.collection('trips').doc(tripId).update({ status });
+        alert(`Status updated: ${status}`);
+        loadDriverTrips();
+      } catch (err) {
+        alert("Error updating status.");
+        console.error(err);
+      }
+    }
+
+    // ====================== COMMUTER ======================
+    async function loadTrips() {
+      const container = document.getElementById('commuterTripList');
+      try {
+        const snap = await db.collection('trips').get();
+        if (snap.empty) {
+          container.innerHTML = `<p class="text-sm text-slate-500 col-span-3 py-10 text-center">No available van trips.</p>`;
+          return;
+        }
+
+        let html = "";
+        snap.forEach(doc => {
+          const t = doc.data();
+          const isFull = t.availableSeats <= 0;
+          html += `
+            <div class="bg-white border border-slate-200/80 rounded-3xl p-6 flex flex-col justify-between shadow-sm hover:shadow-md transition">
+              <div class="space-y-3.5">
+                <div class="flex justify-between items-center">
+                  <span class="bg-indigo-50 text-indigo-700 text-[10px] font-black px-3 py-1 rounded-xl uppercase tracking-wider border border-indigo-100">Scheduled Departure</span>
+                  <span class="text-xs font-black ${isFull ? 'text-rose-600 bg-rose-50 border-rose-100' : 'text-emerald-600 bg-emerald-50 border-emerald-100'} px-2.5 py-1 rounded-xl border flex items-center space-x-1"><i class="fa-solid fa-chair mr-1"></i><span>${t.availableSeats}/${t.totalSeats} Seats</span></span>
+                </div>
+                <div>
+                  <h3 class="font-black text-slate-900 text-lg">${t.route}</h3>
+                  <p class="text-xs text-slate-500 mt-1.5"><i class="fa-solid fa-id-badge text-slate-400 mr-1.5"></i>Driver: <strong class="text-slate-700 font-bold">${t.driverName}</strong></p>
+                  <p class="text-xs text-slate-500 mt-1"><i class="fa-solid fa-clock text-slate-400 mr-1.5"></i>Alis: ${new Date(t.departureTime).toLocaleString()}</p>
+                  <p class="text-xs text-amber-700 mt-1 font-bold"><i class="fa-solid fa-signal mr-1"></i>Status: ${t.status}</p>
+                </div>
+                <div class="pt-3 border-t border-slate-100 flex justify-between items-center text-xs">
+                  <span class="text-slate-400 font-bold uppercase text-[10px]">Transport Fee:</span>
+                  <span class="font-black text-indigo-600 text-lg">₱${t.transportFee}</span>
+                </div>
+              </div>
+              <button onclick="bookSeat('${doc.id}')" ${isFull ? 'disabled' : ''} class="w-full mt-5 ${isFull ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200' : 'bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-600/25'} text-white text-xs font-extrabold py-3.5 rounded-2xl flex items-center justify-center space-x-2">
+                <i class="fa-solid fa-ticket"></i>
+                <span>${isFull ? 'Fully Booked' : 'Book Seat & Get E-Ticket'}</span>
+              </button>
+            </div>
+          `;
+        });
+        container.innerHTML = html;
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    async function bookSeat(tripId) {
+      if (!confirm("Confirm seat booking and generate your E-Ticket?")) return;
+
+      try {
+        const tripRef = db.collection('trips').doc(tripId);
+        const tripDoc = await tripRef.get();
+        if (!tripDoc.exists) return alert("Trip not found.");
+
+        const tripData = tripDoc.data();
+        if (tripData.availableSeats <= 0) return alert("Fully booked na po ang van.");
+
+        await tripRef.update({ availableSeats: tripData.availableSeats - 1 });
+
+        const ticketId = Math.random().toString(36).substring(2, 10).toUpperCase();
+        await db.collection('tickets').add({
+          ticketId,
+          tripId,
+          userId: currentUser.id,
+          userName: currentUser.fullName,
+          route: tripData.route,
+          driverName: tripData.driverName,
+          departureTime: tripData.departureTime,
+          transportFee: tripData.transportFee,
+          status: 'Confirmed'
+        });
+
+        alert("Seat booked successfully!");
+        loadTrips();
+        loadCommuterTickets();
+      } catch (err) {
+        alert("Error booking seat.");
+        console.error(err);
+      }
+    }
+
+    async function loadCommuterTickets() {
+      const ticketSection = document.getElementById('ticketSection');
+      ticketSection.classList.remove('hidden');
+      const container = document.getElementById('commuterTicketList');
+      container.innerHTML = `<p class="text-xs text-slate-400 py-4 text-center col-span-2">Loading your E-Tickets...</p>`;
+
+      try {
+        const snap = await db.collection('tickets').where('userId', '==', currentUser.id).get();
+        if (snap.empty) {
+          container.innerHTML = `<p class="text-sm text-slate-500 py-8 col-span-2 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200">You have no active E-Tickets yet.</p>`;
+          return;
+        }
+
+        let html = "";
+        snap.forEach(doc => {
+          const tk = doc.data();
+          html += `
+            <div class="bg-gradient-to-br from-indigo-950 to-indigo-900 text-white rounded-3xl p-6 shadow-xl flex flex-col justify-between border border-indigo-800">
+              <div class="space-y-3">
+                <div class="flex justify-between items-center border-b border-indigo-800/80 pb-3">
+                  <span class="text-xs uppercase text-amber-400 font-black tracking-wider"><i class="fa-solid fa-van-shuttle mr-1.5"></i> E-Ticket</span>
+                  <span class="bg-emerald-400 text-slate-950 text-[10px] px-3 py-0.5 rounded-full font-black uppercase">${tk.status}</span>
+                </div>
+                <h3 class="text-xl font-black">${tk.route}</h3>
+                <p class="text-xs text-indigo-200"><i class="fa-solid fa-user text-indigo-400 mr-1.5"></i> Passenger: <strong class="text-white">${tk.userName}</strong></p>
+                <p class="text-xs text-indigo-200"><i class="fa-solid fa-id-badge text-indigo-400 mr-1.5"></i> Driver: <strong class="text-white">${tk.driverName}</strong></p>
+                <p class="text-xs text-indigo-200"><i class="fa-solid fa-clock text-indigo-400 mr-1.5"></i> Departure: ${new Date(tk.departureTime).toLocaleString()}</p>
+              </div>
+              <div class="mt-5 pt-3.5 border-t border-indigo-800/80 flex justify-between items-center">
+                <div>
+                  <p class="text-[10px] text-indigo-300 uppercase font-extrabold">Ticket Ref</p>
+                  <p class="font-mono font-black text-amber-400 text-sm tracking-widest">#${tk.ticketId}</p>
+                </div>
+                <p class="font-black text-white text-xl">₱${tk.transportFee}</p>
+              </div>
+            </div>
+          `;
+        });
+        container.innerHTML = html;
+      } catch (err) {
+        container.innerHTML = `<p class="text-xs text-rose-500 py-4 text-center col-span-2">Failed to load tickets.</p>`;
+        console.error(err);
+      }
+    }
+
+    // ====================== ADMIN ======================
+    async function loadAdminUsers() {
+      const container = document.getElementById('adminUserList');
+      try {
+        const snap = await db.collection('users').get();
+        if (snap.empty) {
+          container.innerHTML = `<p class="text-sm text-slate-500 py-6 text-center">No users found.</p>`;
+          return;
+        }
+
+        let html = "";
+        snap.forEach(doc => {
+          const u = doc.data();
+          const badgeColor = u.role === 'admin' ? 'bg-rose-100 text-rose-800 border-rose-200' :
+                             u.role === 'staff' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' :
+                             u.role === 'driver' ? 'bg-amber-100 text-amber-800 border-amber-200' :
+                             'bg-indigo-100 text-indigo-800 border-indigo-200';
+          const dutyText = u.role === 'driver' ? `<span class="text-xs ml-2 text-slate-500 font-medium">(Duty: <strong class="${u.dutyStatus === 'In' ? 'text-emerald-600' : 'text-rose-500'}">${u.dutyStatus || 'Out'}</strong>)</span>` : '';
+          html += `
+            <div class="py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center text-sm gap-4">
+              <div>
+                <p class="font-black text-slate-900 text-base flex items-center">${u.fullName || (u.firstName + ' ' + u.lastName)} <span class="${badgeColor} text-[10px] px-2.5 py-0.5 rounded-lg font-black uppercase ml-2.5 border">${u.role}</span>${dutyText}</p>
+                <p class="text-xs text-slate-500 mt-1">Username: <strong class="text-indigo-600 font-semibold">@${u.username}</strong> ${u.email ? '| Email: ' + u.email : ''}</p>
+                ${u.firstName ? `<p class="text-xs text-slate-400 mt-0.5">First Name: ${u.firstName} | Last Name: ${u.lastName}</p>` : ''}
+              </div>
+              <button onclick="openEditModal('${doc.id}', '${u.username}')" class="bg-indigo-50 hover:bg-indigo-600 text-indigo-600 hover:text-white border border-indigo-200 text-xs font-extrabold px-4 py-2.5 rounded-xl flex items-center space-x-1.5">
+                <i class="fa-solid fa-pen-to-square"></i>
+                <span>Edit Credentials</span>
+              </button>
+            </div>
+          `;
+        });
+        container.innerHTML = html;
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    function openEditModal(userId, username) {
+      document.getElementById('editUserId').value = userId;
+      document.getElementById('editUsername').value = username;
+      document.getElementById('editPassword').value = '';
+      document.getElementById('editUserModal').classList.remove('hidden');
+    }
+    function closeEditModal() {
+      document.getElementById('editUserModal').classList.add('hidden');
+    }
+    async function saveUserCredentials() {
+      const userId = document.getElementById('editUserId').value;
+      const username = document.getElementById('editUsername').value.trim().toLowerCase();
+      const password = document.getElementById('editPassword').value;
+
+      try {
+        const updateData = {};
+        if (username) updateData.username = username;
+        if (password) updateData.password = password;
+
+        await db.collection('users').doc(userId).update(updateData);
+        alert("Credentials updated successfully!");
+        closeEditModal();
+        loadAdminUsers();
+      } catch (err) {
+        alert("Error updating credentials.");
+        console.error(err);
+      }
+    }
+  </script>
+</body>
+</html>
